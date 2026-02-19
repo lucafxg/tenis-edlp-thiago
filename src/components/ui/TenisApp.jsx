@@ -194,6 +194,8 @@ const APP_CONFIG_DEFAULT = {
 // -----------------------------
 
 function bootstrapState() {
+  if (typeof window === "undefined") return null;
+  
   const raw = localStorage.getItem(LS_KEY);
   if (raw) return safeParseJSON(raw, null);
 
@@ -361,7 +363,13 @@ function BottomNav({ active, setActive, isAdmin }) {
 // -----------------------------
 
 export default function App() {
-  const [db, setDb] = useState(() => bootstrapState());
+  const [db, setDb] = useState(null);
+
+    useEffect(() => {
+      setDb(bootstrapState());
+    }, []);
+
+    if (!db) return null;
   const [sessionUserId, setSessionUserId] = useState(() => db.sessions?.currentUserId || null);
   const [activeTab, setActiveTab] = useState("reservar");
   const [authScreen, setAuthScreen] = useState(null); // null | 'login' | 'register'
