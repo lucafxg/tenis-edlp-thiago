@@ -363,42 +363,48 @@ function BottomNav({ active, setActive, isAdmin }) {
 // -----------------------------
 
 export default function App() {
+  const [mounted, setMounted] = useState(false);
   const [db, setDb] = useState(null);
-
-    useEffect(() => {
-      setDb(bootstrapState());
-    }, []);
-
-    if (!db) return null;
-  const [sessionUserId, setSessionUserId] = useState(() => db.sessions?.currentUserId || null);
+  const [sessionUserId, setSessionUserId] = useState(null);
   const [activeTab, setActiveTab] = useState("reservar");
-  const [authScreen, setAuthScreen] = useState(null); // null | 'login' | 'register'
+  const [authScreen, setAuthScreen] = useState(null);
 
   useEffect(() => {
+    setMounted(true);
+    const initialDb = bootstrapState();
+    setDb(initialDb);
+    setSessionUserId(initialDb?.sessions?.currentUserId || null);
+  }, []);
+
+  useEffect(() => {
+    if (!db) return;
     setDb((prev) => {
       const next = { ...prev, sessions: { ...prev.sessions, currentUserId: sessionUserId } };
       persistState(next);
       return next;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionUserId]);
-
-  const user = useMemo(() => db.users.find((u) => u.id === sessionUserId) || null, [db.users, sessionUserId]);
-  const api = useMemo(() => createApi(db, setDb), [db]);
-  const isAdmin = user?.role === "admin";
 
   useEffect(() => {
     if (!user) setActiveTab("reservar");
   }, [user]);
 
-  // 🔁 Redirección automática a "Mis reservas" luego de pago exitoso
   useEffect(() => {
-    function handler() {
-      setActiveTab("mis");
-    }
+    function handler() { setActiveTab("mis"); }
     document.addEventListener('go-to-mis', handler);
     return () => document.removeEventListener('go-to-mis', handler);
   }, []);
+
+  // ✅ El return condicional va AL FINAL de todos los hooks
+  const user = useMemo(() => db?.users?.find((u) => u.id === sessionUserId) || null, [db, sessionUserId]);
+  const api = useMemo(() => db ? createApi(db, setDb) : null, [db]);
+  const isAdmin = user?.role === "admin";
+
+  if (!mounted || !db) return (
+    <div className="flex items-center justify-center h-screen">
+      <p>Cargando...</p>
+    </div>
+  );
 
   return (
     <div className={`min-h-screen ${!user && !authScreen ? 'bg-gradient-to-br from-red-700 via-red-600 to-red-800' : 'bg-background'}`}>
